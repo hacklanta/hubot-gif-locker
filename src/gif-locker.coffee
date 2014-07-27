@@ -23,19 +23,19 @@ module.exports = (robot) ->
     gifName = msg.match[1].trim()
     gifUrl = msg.match[2].trim() 
 
-    gifMe = robot.brain.get('gifMe') || {}
-    gifMe.gifs ||= []
-    gifMe.gifs.push { name: gifName, url: gifUrl }
+    gifLocker = robot.brain.get('gifLocker') || {}
+    gifLocker.gifs ||= []
+    gifLocker.gifs.push { name: gifName, url: gifUrl }
 
-    robot.brain.set 'gifMe', gifMe
+    robot.brain.set 'gifLocker', gifLocker
 
     msg.send "#{gifName}. Got it."
 
   showGif = (msg) ->
     gifName = msg.match[1].trim()
 
-    gifMe = robot.brain.get('gifMe')
-    gifSet = gifMe?.gifs?.filter (gif) -> gif.name == gifName
+    gifLocker = robot.brain.get('gifLocker')
+    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name == gifName
     gifUrl = gifSet[Math.floor(Math.random()*gifSet.length)].url
 
     msg.send gifUrl
@@ -43,8 +43,8 @@ module.exports = (robot) ->
   listGifs = (msg) ->
     gifName = msg.match[1].trim()
 
-    gifMe = robot.brain.get('gifMe')
-    gifSet = gifMe?.gifs?.filter (gif) -> gif.name == gifName
+    gifLocker = robot.brain.get('gifLocker')
+    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name == gifName
 
     console.log JSON.stringify(gifSet) + " fooo"
     msg.send JSON.stringify(gifSet)
@@ -52,11 +52,11 @@ module.exports = (robot) ->
   removeGifsByName = (msg) ->
     gifName = msg.match[1].trim()
 
-    gifMe = robot.brain.get('gifMe')
-    gifSet = gifMe?.gifs?.filter (gif) -> gif.name != gifName
-    gifMe.gifs = gifSet
+    gifLocker = robot.brain.get('gifLocker')
+    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name != gifName
+    gifLocker.gifs = gifSet
 
-    robot.brain.set 'gifMe', gifMe
+    robot.brain.set 'gifLocker', gifLocker
     
     msg.send "Removed #{gifName}."
 
@@ -64,11 +64,11 @@ module.exports = (robot) ->
     gifName = msg.match[1].trim()
     gifUrl = msg.match[2].trim() 
 
-    gifMe = robot.brain.get('gifMe')
-    gifSet = gifMe?.gifs?.filter (gif) -> (gif.name != gifName && gif.url != gifUrl)
-    gifMe.gifs = gifSet
+    gifLocker = robot.brain.get('gifLocker')
+    gifSet = gifLocker?.gifs?.filter (gif) -> (gif.name != gifName && gif.url != gifUrl)
+    gifLocker.gifs = gifSet
 
-    robot.brain.set 'gifMe', gifMe
+    robot.brain.set 'gifLocker', gifLocker
     
     msg.send "Removed #{gifUrl} from #{gifName}."
   

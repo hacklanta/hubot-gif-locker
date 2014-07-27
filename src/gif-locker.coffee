@@ -9,9 +9,9 @@
 # Commands:
 #   hubot gif {gif-name} - Display random gif url from given name.
 #   hubot store {gif-name} {gif-url} - Store gif url with given name.
-#   hubot remove gif {gif-name} - Remove all gifs with given name.
-#   hubot remove all {gif-name} {gif-url} - Remove specific gif url with given name.
-#   hubot list {gif-name} - Display gif urls from given name.
+#   hubot remove all {gif-name} - Remove all gifs with given name.
+#   hubot remove gif {gif-name} {gif-url} - Remove specific gif url with given name.
+#   hubot list gifs {gif-name} - Display gif urls from given name.
 # 
 # Author: 
 #   hacklanta
@@ -46,6 +46,7 @@ module.exports = (robot) ->
     gifMe = robot.brain.get('gifMe')
     gifSet = gifMe?.gifs?.filter (gif) -> gif.name == gifName
 
+    console.log JSON.stringify(gifSet) + " fooo"
     msg.send JSON.stringify(gifSet)
 
   removeGifsByName = (msg) ->

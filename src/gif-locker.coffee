@@ -36,9 +36,13 @@ module.exports = (robot) ->
 
     gifLocker = robot.brain.get('gifLocker')
     gifSet = gifLocker?.gifs?.filter (gif) -> gif.name == gifName
-    gifUrl = gifSet[Math.floor(Math.random()*gifSet.length)].url
 
-    msg.send gifUrl
+    if gifSet?.length > 0
+      gifUrl = gifSet[Math.floor(Math.random()*gifSet.length)].url
+      msg.send gifUrl
+    else
+      msg.send "Did not find any cool gifs for #{gifName}. You should add some!"
+
 
   listGifs = (msg) ->
     gifName = msg.match[1].trim()
@@ -46,7 +50,6 @@ module.exports = (robot) ->
     gifLocker = robot.brain.get('gifLocker')
     gifSet = gifLocker?.gifs?.filter (gif) -> gif.name == gifName
 
-    console.log JSON.stringify(gifSet) + " fooo"
     msg.send JSON.stringify(gifSet)
 
   removeGifsByName = (msg) ->

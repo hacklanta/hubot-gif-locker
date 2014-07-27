@@ -1,5 +1,5 @@
 {
-  "name": "hubot-gif-me",
+  "name": "hubot-gif-locker",
   "description": "Hubot script for storing and retrieving gif urls",
   "version": "1.0.0",
   "author": "Mike Rivera <rivera.mj@gmail.com>",
@@ -11,10 +11,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/hacklanta/hubot-gif-me.git"
+    "url": "git://github.com/hacklanta/hubot-gif-locker.git"
   },
   "bugs": {
-    "url": "https://github.com/hacklanta/hubot-gif-me/issues"
+    "url": "https://github.com/hacklanta/hubot-gif-locker/issues"
   },
   "dependencies": {
     "coffee-script": "~1.6"

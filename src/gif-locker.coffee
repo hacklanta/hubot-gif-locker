@@ -65,7 +65,7 @@ module.exports = (robot) ->
     gifUrl = msg.match[2].trim() 
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> (gif.name != gifName && gif.url != gifUrl)
+    gifSet = gifLocker?.gifs?.filter (gif) -> !(gif.name == gifName && gif.url == gifUrl)
     gifLocker.gifs = gifSet
 
     robot.brain.set 'gifLocker', gifLocker

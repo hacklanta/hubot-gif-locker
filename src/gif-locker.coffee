@@ -21,7 +21,7 @@ module.exports = (robot) ->
 
   storeGif = (msg) ->
     gifName = msg.match[1].trim()
-    gifUrl = msg.match[2].trim() 
+    gifUrl = msg.match[2].trim()
 
     gifLocker = robot.brain.get('gifLocker') || {}
     gifLocker.gifs ||= []
@@ -35,7 +35,7 @@ module.exports = (robot) ->
     gifName = msg.match[1].trim()
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name == gifName
+    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase == gifName.toLowerCase
 
     if gifSet?.length > 0
       gifUrl = gifSet[Math.floor(Math.random()*gifSet.length)].url
@@ -48,7 +48,7 @@ module.exports = (robot) ->
     gifName = msg.match[1].trim()
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name == gifName
+    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase == gifName.toLowerCase
 
     msg.send JSON.stringify(gifSet)
 
@@ -56,7 +56,7 @@ module.exports = (robot) ->
     gifName = msg.match[1].trim()
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name != gifName
+    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase != gifName.toLowerCase
     gifLocker.gifs = gifSet
 
     robot.brain.set 'gifLocker', gifLocker
@@ -68,7 +68,7 @@ module.exports = (robot) ->
     gifUrl = msg.match[2].trim() 
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> !(gif.name == gifName && gif.url == gifUrl)
+    gifSet = gifLocker?.gifs?.filter (gif) -> !(gif.name.toLowerCase == gifName.toLowerCase && gif.url == gifUrl)
     gifLocker.gifs = gifSet
 
     robot.brain.set 'gifLocker', gifLocker

@@ -14,7 +14,7 @@
 #   hubot list gifs {gif-name} - Display gif urls from given name.
 # 
 # Author: 
-#   hacklanta
+#   @riveramj
 
 
 module.exports = (robot) ->

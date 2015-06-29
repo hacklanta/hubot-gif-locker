@@ -34,10 +34,11 @@ module.exports = (robot) ->
     msg.send "#{gifName}. Got it."
 
   showGif = (msg, showNoGifMessage) ->
+
     gifName = msg.match[1].trim()
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase == gifName.toLowerCase
+    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase() == gifName.toLowerCase()
 
     if gifSet?.length > 0
       gifUrl = gifSet[Math.floor(Math.random()*gifSet.length)].url
@@ -50,14 +51,13 @@ module.exports = (robot) ->
     gifName = msg.match[1].trim()
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase == gifName.toLowerCase
+    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase() == gifName.toLowerCase()
 
     msg.send JSON.stringify(gifSet)
 
   listAllGifs = (msg) ->
     gifLocker = robot.brain.get('gifLocker')
     gifSet = gifLocker?.gifs
-    console.log gifSet
 
     names = []
     
@@ -73,7 +73,7 @@ module.exports = (robot) ->
     gifName = msg.match[1].trim()
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase != gifName.toLowerCase
+    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase() != gifName.toLowerCase()
     gifLocker.gifs = gifSet
 
     robot.brain.set 'gifLocker', gifLocker
@@ -82,10 +82,10 @@ module.exports = (robot) ->
 
   removeGifsByNameUrl = (msg) ->
     gifName = msg.match[1].trim()
-    gifUrl = msg.match[2].trim() 
+    gifUrl = msg.match[2].trim()
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> !(gif.name.toLowerCase == gifName.toLowerCase && gif.url == gifUrl)
+    gifSet = gifLocker?.gifs?.filter (gif) -> !(gif.name.toLowerCase() == gifName.toLowerCase() && gif.url == gifUrl)
     gifLocker.gifs = gifSet
 
     robot.brain.set 'gifLocker', gifLocker
@@ -97,11 +97,11 @@ module.exports = (robot) ->
     storeGif(msg)
 
   robot.respond /gif (.+)/i, (msg) ->
-    showGif(msg, true)
+    showGif(msg)
 
   robot.hear ///^(?!#{robot.name})(.+)\.gif$///i, (msg) ->
     showGif(msg, false)
-  
+
   robot.respond /list gifs (.+)/i, (msg) ->
     listGifs(msg)
 

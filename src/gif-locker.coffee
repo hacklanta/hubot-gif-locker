@@ -8,10 +8,12 @@
 #   Nope
 # Commands:
 #   hubot gif {gif-name} - Display random gif url from given name.
+#   <gif-name>.gif - Display random gif url from given name. Will not show error message if no gif found.
 #   hubot store {gif-name} {gif-url} - Store gif url with given name.
 #   hubot remove all {gif-name} - Remove all gifs with given name.
 #   hubot remove gif {gif-name} {gif-url} - Remove specific gif url with given name.
 #   hubot list gifs {gif-name} - Display gif urls from given name.
+#   hubot list gifs - Display gif names stored.
 # 
 # Author: 
 #   @riveramj
@@ -31,7 +33,7 @@ module.exports = (robot) ->
 
     msg.send "#{gifName}. Got it."
 
-  showGif = (msg) ->
+  showGif = (msg, showNoGifMessage) ->
     gifName = msg.match[1].trim()
 
     gifLocker = robot.brain.get('gifLocker')
@@ -41,8 +43,8 @@ module.exports = (robot) ->
       gifUrl = gifSet[Math.floor(Math.random()*gifSet.length)].url
       msg.send gifUrl
     else
-      msg.send "Did not find any cool gifs for #{gifName}. You should add some!"
-
+      if showNoGifMessage
+        msg.send "Did not find any cool gifs for #{gifName}. You should add some!"
 
   listGifs = (msg) ->
     gifName = msg.match[1].trim()
@@ -51,6 +53,21 @@ module.exports = (robot) ->
     gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase == gifName.toLowerCase
 
     msg.send JSON.stringify(gifSet)
+
+  listAllGifs = (msg) ->
+    gifLocker = robot.brain.get('gifLocker')
+    gifSet = gifLocker?.gifs
+    console.log gifSet
+
+    names = []
+    
+    for gif in gifSet
+      if (names.indexOf(gif.name) == -1)
+        names.push gif.name
+
+    names = names.sort().toString().replace(/,/g, "\n")
+
+    msg.send names
 
   removeGifsByName = (msg) ->
     gifName = msg.match[1].trim()
@@ -80,10 +97,16 @@ module.exports = (robot) ->
     storeGif(msg)
 
   robot.respond /gif (.+)/i, (msg) ->
-    showGif(msg)
+    showGif(msg, true)
+
+  robot.hear ///^(?!#{robot.name})(.+)\.gif$///i, (msg) ->
+    showGif(msg, false)
   
   robot.respond /list gifs (.+)/i, (msg) ->
     listGifs(msg)
+
+  robot.respond /list gifs$/i, (msg) ->
+    listAllGifs(msg)
 
   robot.respond /remove all (.+)/i, (msg) ->
     removeGifsByName(msg)

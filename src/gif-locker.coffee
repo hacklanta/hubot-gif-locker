@@ -22,36 +22,40 @@
 module.exports = (robot) ->
 
   storeGif = (msg) ->
-    gifName = msg.match[1].trim()
+    gifName = msg.match[1].trim().toLowerCase()
     gifUrl = msg.match[2].trim()
 
     gifLocker = robot.brain.get('gifLocker') || {}
-    gifLocker.gifs ||= []
-    gifLocker.gifs.push { name: gifName, url: gifUrl }
+    gifLocker.gifs ||= {}
+
+    gifLocker.gifs[gifName] ||= []
+    gifLocker.gifs[gifName].push gifUrl
 
     robot.brain.set 'gifLocker', gifLocker
 
     msg.send "#{gifName}. Got it."
 
-  showGif = (msg, showNoGifMessage) ->
+  showGif = (msg, showNoGifMessage = true) ->
 
-    gifName = msg.match[1].trim()
+    gifName = msg.match[1].trim().toLowerCase()
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase() == gifName.toLowerCase()
 
-    if gifSet?.length > 0
-      gifUrl = gifSet[Math.floor(Math.random()*gifSet.length)].url
+    gifSet = gifLocker?.gifs?[gifName] || []
+
+    if gifSet.length > 0
+      gifUrl = gifSet[Math.floor(Math.random()*gifSet.length)]
       msg.send gifUrl
     else
       if showNoGifMessage
         msg.send "Did not find any cool gifs for #{gifName}. You should add some!"
 
   listGifs = (msg) ->
-    gifName = msg.match[1].trim()
+    gifName = msg.match[1].trim().toLowerCase()
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase() == gifName.toLowerCase()
+
+    gifSet = gifLocker?.gifs?[gifName] || []
 
     msg.send JSON.stringify(gifSet)
 
@@ -59,11 +63,7 @@ module.exports = (robot) ->
     gifLocker = robot.brain.get('gifLocker')
     gifSet = gifLocker?.gifs
 
-    names = []
-    
-    for gif in gifSet
-      if (names.indexOf(gif.name) == -1)
-        names.push gif.name
+    names = Object.keys gifSet
 
     names = names.sort().toString().replace(/,/g, "\n")
 
@@ -91,7 +91,6 @@ module.exports = (robot) ->
     robot.brain.set 'gifLocker', gifLocker
     
     msg.send "Removed #{gifUrl} from #{gifName}."
-  
 
   robot.respond /store (.+) (.+)/i, (msg) ->
     storeGif(msg)

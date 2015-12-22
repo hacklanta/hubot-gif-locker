@@ -21,6 +21,32 @@
 
 module.exports = (robot) ->
 
+  migrateURLData = (gifSet) ->
+    gifLocker = robot.brain.get('gifLocker')
+    migrated = gifLocker?.migrated || false
+
+    if !migrated
+      allGifs = gifLocker?.gifs || {}
+      uniqueGifNames = []
+      newGifs = {}
+    
+      for gif in allGifs
+        name = gif.name.toLowerCase()
+        gifSet = allGifs.filter (gif) -> gif.name.toLowerCase() == name
+        for gif in gifSet
+          newGifs[name] ||= []
+          if newGifs[name].indexOf(gif.url) == -1
+            newGifs[name].push gif.url
+
+      gifLocker?.gifs = newGifs
+      gifLocker?.migrated = true
+    
+      robot.brain.set 'gifLocker', gifLocker
+
+  setTimeout ->
+    migrateURLData ->
+  , 2 * 1000
+
   storeGif = (msg) ->
     gifName = msg.match[1].trim().toLowerCase()
     gifUrl = msg.match[2].trim()

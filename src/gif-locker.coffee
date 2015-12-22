@@ -45,7 +45,7 @@ module.exports = (robot) ->
 
   setTimeout ->
     migrateURLData ->
-  , 2 * 1000
+  , 4 * 1000
 
   storeGif = (msg) ->
     gifName = msg.match[1].trim().toLowerCase()

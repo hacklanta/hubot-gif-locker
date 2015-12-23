@@ -118,6 +118,19 @@ module.exports = (robot) ->
     
     msg.send "Removed #{gifUrl} from #{gifName}."
 
+  renameGif = (msg) ->
+    oldName = msg.match[1].trim().toLowerCase()
+    newName = msg.match[2].trim().toLowerCase()
+
+    gifLocker = robot.brain.get('gifLocker')
+    gifSet = gifLocker?.gifs[oldName]
+    delete gifLocker?.gifs[oldName]
+    
+    gifLocker?.gifs[newName] = gifSet
+    robot.brain.set 'gifLocker', gifLocker
+
+    msg.send "Renamed #{oldName} to #{newName}"
+  
   robot.respond /store (.+) (.+)/i, (msg) ->
     storeGif(msg)
 
@@ -138,3 +151,9 @@ module.exports = (robot) ->
 
   robot.respond /remove gif (.+) (.+)/i, (msg) ->
     removeGifsByNameUrl(msg)
+
+  robot.respond /alias gif (.+) to (.+)/i, (msg) ->
+    aliasGifName(msg)
+
+  robot.respond /(?:rename|move|mv) gif (.+) to (.+)/i, (msg) ->
+    renameGif(msg)

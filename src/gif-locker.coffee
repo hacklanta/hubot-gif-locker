@@ -2,10 +2,11 @@
 #   Store and retrieve your favorite gif urls
 #
 # Dependencies:
-#   Nope
+#   "Underscore": "1.8.3"
 #
 # Configuration:
 #   Nope
+#
 # Commands:
 #   hubot gif {gif-name} - Display random gif url from given name.
 #   <gif-name>.gif - Display random gif url from given name. Will not show error message if no gif found.
@@ -18,6 +19,7 @@
 # Author: 
 #   @riveramj
 
+_ = require 'underscore'
 
 module.exports = (robot) ->
 
@@ -44,116 +46,188 @@ module.exports = (robot) ->
       robot.brain.set 'gifLocker', gifLocker
 
   setTimeout ->
-    migrateURLData ->
+    #migrateURLData ->
   , 4 * 1000
-
+  
   storeGif = (msg) ->
-    gifName = msg.match[1].trim().toLowerCase()
-    gifUrl = msg.match[2].trim()
+    name = msg.match[1].trim().toLowerCase()
+    url = msg.match[2].trim()
 
     gifLocker = robot.brain.get('gifLocker') || {}
-    gifLocker.gifs ||= {}
+    gifLocker.gifs ||= []
 
-    gifLocker.gifs[gifName] ||= []
-    gifLocker.gifs[gifName].push gifUrl
+    possibleGif = _.findWhere gifLocker.gifs, {name: name}
+
+    if possibleGif?
+      possibleGif.url.push url
+    else
+      gifLocker.gifs.push {name: name, url: [url]}
 
     robot.brain.set 'gifLocker', gifLocker
 
-    msg.send "#{gifName}. Got it."
+    msg.send "#{name}. Got it."
 
   showGif = (msg, showNoGifMessage = true) ->
 
-    gifName = msg.match[1].trim().toLowerCase()
+    name = msg.match[1].trim().toLowerCase()
 
-    gifLocker = robot.brain.get('gifLocker')
+    gifLocker = robot.brain.get('gifLocker') || {}
+    gifLocker.gifs ||= []
 
-    gifSet = gifLocker?.gifs?[gifName] || []
+    possibleGif = _.findWhere(gifLocker.gifs, name: name)
 
-    if gifSet.length > 0
-      gifUrl = gifSet[Math.floor(Math.random()*gifSet.length)]
-      msg.send gifUrl
+    gif = if possibleGif?
+      possibleGif
+    else
+      _.filter gifLocker.gifs, (maybeGif) -> _.contains maybeGif.alias, name
+    
+    urls = gif[0]?.url || []
+
+    if urls.length > 0
+      msg.send urls[Math.floor(Math.random() * urls.length)]
     else
       if showNoGifMessage
-        msg.send "Did not find any cool gifs for #{gifName}. You should add some!"
+        msg.send "Did not find any cool gifs for #{name}. You should add some! Or create an alias!"
 
-  listGifs = (msg) ->
-    gifName = msg.match[1].trim().toLowerCase()
+  listGifUrls = (msg) ->
+    name = msg.match[1].trim().toLowerCase()
 
-    gifLocker = robot.brain.get('gifLocker')
+    gifLocker = robot.brain.get('gifLocker') || {}
+    gifLocker.gifs ||= []
 
-    gifSet = gifLocker?.gifs?[gifName] || []
+    possibleGif = _.findWhere gifLocker.gifs, name: name
 
-    msg.send JSON.stringify(gifSet)
+    gif =
+      if possibleGif?.url.length > 0
+        possibleGif
+      else
+        (_.filter gifLocker.gifs, (maybeGif) -> _.contains maybeGif.alias, name)?[0]
+
+    msg.send JSON.stringify(gif?.url)
 
   listAllGifs = (msg) ->
-    gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs
+    gifLocker = robot.brain.get('gifLocker') || {}
+    gifLocker.gifs || = []
 
-    names = Object.keys gifSet
+    names = _.pluck gifLocker.gifs, 'name'
+    aliases = _.pluck gifLocker.gifs, 'alias'
 
-    names = names.sort().toString().replace(/,/g, "\n")
+    gifs = names.concat aliases
+
+    names = gifs.sort().toString().replace(/,/g, "\n")
 
     msg.send names
 
   removeGifsByName = (msg) ->
-    gifName = msg.match[1].trim()
+    name = msg.match[1].trim().toLowerCase()
 
-    gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase() != gifName.toLowerCase()
+    gifLocker = robot.brain.get('gifLocker') || {}
+    gifLocker.gifs ||= []
+
+    gifSet = _.reject gifLocker.gifs, (gif) -> gif.name == name
+    
     gifLocker.gifs = gifSet
 
     robot.brain.set 'gifLocker', gifLocker
     
-    msg.send "Removed #{gifName}."
+    msg.send "Removed #{name}."
 
   removeGifsByNameUrl = (msg) ->
-    gifName = msg.match[1].trim()
-    gifUrl = msg.match[2].trim()
+    name = msg.match[1].trim().toLowerCase()
+    url = msg.match[2].trim()
 
-    gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> !(gif.name.toLowerCase() == gifName.toLowerCase() && gif.url == gifUrl)
-    gifLocker.gifs = gifSet
+    gifLocker = robot.brain.get('gifLocker') || {}
+    gifLocker.gifs ||= []
+    gif = _.findWhere gifLocker.gifs, name: name
+    updatedUrls = _.without gif.url, url
+
+    _.extend gif, url: updatedUrls
 
     robot.brain.set 'gifLocker', gifLocker
     
-    msg.send "Removed #{gifUrl} from #{gifName}."
+    msg.send "Removed #{url} from #{name}."
+
+  aliasGif = (msg) ->
+    alias = msg.match[1].trim().toLowerCase()
+    name = msg.match[2].trim().toLowerCase()
+
+    gifLocker = robot.brain.get('gifLocker') || {}
+    gifLocker.gifs ||= []
+
+    possibleAlias = _.filter gifLocker.gifs, (maybeAlias) -> _.contains maybeAlias.alias, alias
+
+    gif = _.findWhere(gifLocker.gifs, {name: name})
+
+    if possibleAlias.length > 0
+      msg.send "#{alias} already exists. Links to #{possibleAlias[0].name}."
+    else
+      if gif.alias?
+        gif.alias.push alias
+      else
+      _.extend gif, {alias: [alias]}
+
+      robot.brain.set 'gifLocker', gifLocker
+
+      msg.send "#{name} aliased to #{alias}. Got it."
 
   renameGif = (msg) ->
     oldName = msg.match[1].trim().toLowerCase()
     newName = msg.match[2].trim().toLowerCase()
 
-    gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs[oldName]
-    delete gifLocker?.gifs[oldName]
+    gifLocker = robot.brain.get('gifLocker') || {}
+    gifLocker.gifs ||= []
     
-    gifLocker?.gifs[newName] = gifSet
+    gif = _.findWhere gifLocker.gifs, {name: oldName}
+    _.extend gif, name: newName
+    
     robot.brain.set 'gifLocker', gifLocker
 
     msg.send "Renamed #{oldName} to #{newName}"
   
+  removeAlias = (msg) ->
+    alias = msg.match[1].trim().toLowerCase()
+
+    gifLocker = robot.brain.get('gifLocker') || {}
+    gifLocker.gifs ||= []
+
+    gif = (_.filter gifLocker.gifs, (maybeGif) -> _.contains maybeGif.alias, alias)?[0]
+    if gif?.alias?.length > 0
+      updatedAlias = _.reject gif.alias, (possibleAlias) -> possibleAlias == alias
+    
+      _.extend gif, alias: updatedAlias
+  
+      robot.brain.set 'gifLocker', gifLocker
+      msg.send "Removed alias #{alias}."
+    else
+      msg.send "alias '#{alias}' not found."
+
+  
   robot.respond /store (.+) (.+)/i, (msg) ->
-    storeGif(msg)
+    storeGif msg
 
   robot.respond /gif (.+)/i, (msg) ->
-    showGif(msg)
+    showGif msg
 
   robot.hear ///^(?!#{robot.name})(.+)\.gif$///i, (msg) ->
-    showGif(msg, false)
+    showGif msg, false
 
   robot.respond /list gifs (.+)/i, (msg) ->
-    listGifs(msg)
+    listGifUrls msg
 
   robot.respond /list gifs$/i, (msg) ->
-    listAllGifs(msg)
+    listAllGifs msg
 
   robot.respond /remove all (.+)/i, (msg) ->
-    removeGifsByName(msg)
+    removeGifsByName msg
 
   robot.respond /remove gif (.+) (.+)/i, (msg) ->
-    removeGifsByNameUrl(msg)
+    removeGifsByNameUrl msg
 
   robot.respond /alias gif (.+) to (.+)/i, (msg) ->
-    aliasGifName(msg)
+    aliasGif msg
+
+  robot.respond /remove alias (.+)/i, (msg) ->
+    removeAlias msg
 
   robot.respond /(?:rename|move|mv) gif (.+) to (.+)/i, (msg) ->
-    renameGif(msg)
+    renameGif msg

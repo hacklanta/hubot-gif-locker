@@ -15,6 +15,10 @@
 #   hubot remove gif {gif-name} {gif-url} - Remove specific gif url with given name.
 #   hubot list gifs {gif-name} - Display gif urls from given name.
 #   hubot list gifs - Display gif names stored.
+#   hubot alias {alias} to {gif-name} - Connect alias to gif-name
+#   hubot show alias for {gif-name} - Show available aliases for gif-name
+#   hubot remove alias {alias} - Remove alias from gif-name
+#   ship it - listens for "ship it" and posts a gif if populated.
 # 
 # Author: 
 #   @riveramj
@@ -22,6 +26,25 @@
 _ = require 'underscore'
 
 module.exports = (robot) ->
+
+  v107v108 = """
+    Tap Tap... Is this thing on? Oh hai!
+    
+    Check out this fancypants new annoucement tool. I'll now let you know when I've got cool new abilities. I'll also share the winning lottery numbers before they are drawn!
+    And now on to the important numbers, er things! New functionality!
+
+    I can now:
+    1. Respond to {gif-name}.gif
+    2. Alias other names for gifs with `alias word to gif-name`
+    3. Post ship-it squirrels! If I hear `ship it`, a gif will magically appear (if populated).
+    4. Bake a cake! All I need is your credit card number and we're in business!
+
+    Finally if want to limit the room this gets posted in, set HUBOT_GIF_ROOM with the room id.
+    
+    I think that does it for now. I meant to give you something else but I can't remember what it was...
+
+    Feedback, issues, requests: github.com/hacklanta/hubot-gif-locker/issues
+    """
 
   migrateTo107 = (gifLocker) ->
     allGifs = gifLocker.gifs || {}
@@ -37,6 +60,7 @@ module.exports = (robot) ->
           newGifs[name].push gif.url
 
     gifLocker.gifs = newGifs
+    gifLocker.announced = false
     gifLocker.migrated = "1.0.7"
     
     robot.brain.set 'gifLocker', gifLocker
@@ -52,25 +76,41 @@ module.exports = (robot) ->
       newGifs.push {name: gif[0], url: gif[1]}
 
     gifLocker.gifs = newGifs
+    gifLocker.announced = false
     gifLocker.migrated = "1.0.8"
   
     robot.brain.set 'gifLocker', gifLocker
 
-
-  migrateURLData = () ->
+  migrateURLData = (callback) ->
     gifLocker = robot.brain.get('gifLocker') || {}
     migrationState = gifLocker?.migrated || ""
 
     switch migrationState
       when false, ""
         migrateTo107 gifLocker
+        callback("1.0.7")
       when true, "1.0.7"
         migrateTo108 gifLocker
+        callback("1.0.8")
       else
-      
+        callback("none")
+  
+  sendAnnouncement = (version) ->
+    gifLocker = robot.brain.get('gifLocker') || {}
+    gifLocker.announced ||= false
+    
+    if !gifLocker.announced
+      robot.messageRoom "Shell", version
+      gifLocker.announced = true
+      robot.brain.set 'gifLocker', gifLocker
 
   setTimeout ->
-    migrateURLData ->
+    migrateURLData (migration) ->
+      switch migration
+        when "1.0.7", "1.0.8"
+          sendAnnouncement v107v108
+        else
+
   , 4 * 1000
   
   storeGif = (msg) ->

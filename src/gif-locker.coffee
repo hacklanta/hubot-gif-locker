@@ -23,30 +23,54 @@ _ = require 'underscore'
 
 module.exports = (robot) ->
 
-  migrateURLData = (gifSet) ->
-    gifLocker = robot.brain.get('gifLocker')
-    migrated = gifLocker?.migrated || false
-
-    if !migrated
-      allGifs = gifLocker?.gifs || {}
-      uniqueGifNames = []
-      newGifs = {}
+  migrateTo107 = (gifLocker) ->
+    allGifs = gifLocker.gifs || {}
+    uniqueGifNames = []
+    newGifs = {}
     
-      for gif in allGifs
-        name = gif.name.toLowerCase()
-        gifSet = allGifs.filter (gif) -> gif.name.toLowerCase() == name
-        for gif in gifSet
-          newGifs[name] ||= []
-          if newGifs[name].indexOf(gif.url) == -1
-            newGifs[name].push gif.url
+    for gif in allGifs
+      name = gif.name.toLowerCase()
+      gifSet = allGifs.filter (gif) -> gif.name.toLowerCase() == name
+      for gif in gifSet
+        newGifs[name] ||= []
+        if newGifs[name].indexOf(gif.url) == -1
+          newGifs[name].push gif.url
 
-      gifLocker?.gifs = newGifs
-      gifLocker?.migrated = true
+    gifLocker.gifs = newGifs
+    gifLocker.migrated = "1.0.7"
     
-      robot.brain.set 'gifLocker', gifLocker
+    robot.brain.set 'gifLocker', gifLocker
+
+    migrateTo108 gifLocker
+
+  migrateTo108 = (gifLocker) ->
+    gifLocker = robot.brain.get('gifLocker') || {}
+    allGifs = gifLocker.gifs || []
+    newGifs = []
+
+    for gif in _.pairs(allGifs)
+      newGifs.push {name: gif[0], url: gif[1]}
+
+    gifLocker.gifs = newGifs
+    gifLocker.migrated = "1.0.8"
+  
+    robot.brain.set 'gifLocker', gifLocker
+
+
+  migrateURLData = () ->
+    gifLocker = robot.brain.get('gifLocker') || {}
+    migrationState = gifLocker?.migrated || ""
+
+    switch migrationState
+      when false, ""
+        migrateTo107 gifLocker
+      when true, "1.0.7"
+        migrateTo108 gifLocker
+      else
+      
 
   setTimeout ->
-    #migrateURLData ->
+    migrateURLData ->
   , 4 * 1000
   
   storeGif = (msg) ->

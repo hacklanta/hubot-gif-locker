@@ -131,9 +131,7 @@ module.exports = (robot) ->
 
     msg.send "#{name}. Got it."
 
-  showGif = (msg, showNoGifMessage = true) ->
-
-    name = msg.match[1].trim().toLowerCase()
+  showGif = (msg, name, showNoGifMessage = true) ->
 
     gifLocker = robot.brain.get('gifLocker') || {}
     gifLocker.gifs ||= []
@@ -270,10 +268,14 @@ module.exports = (robot) ->
     storeGif msg
 
   robot.respond /gif (.+)/i, (msg) ->
-    showGif msg
+    name = msg.match[1].trim().toLowerCase()
+    if name != "ship it"
+      showGif msg, name
 
   robot.hear ///^(?!#{robot.name})(.+)\.gif$///i, (msg) ->
-    showGif msg, false
+    name = msg.match[1].trim().toLowerCase()
+    if name != "ship it"
+      showGif msg, name, false
 
   robot.respond /list gifs (.+)/i, (msg) ->
     listGifUrls msg
@@ -295,3 +297,7 @@ module.exports = (robot) ->
 
   robot.respond /(?:rename|move|mv) gif (.+) to (.+)/i, (msg) ->
     renameGif msg
+
+  robot.hear /(ship\s*it)/i, (msg) ->
+    name = msg.match[1].trim().toLowerCase()
+    showGif msg, name, false

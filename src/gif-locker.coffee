@@ -18,6 +18,7 @@
 #   hubot alias {alias} to {gif-name} - Connect alias to gif-name
 #   hubot show alias for {gif-name} - Show available aliases for gif-name
 #   hubot remove alias {alias} - Remove alias from gif-name
+#   hubot rename|move|mv gif {oldName} to {newName} - update name of gif
 #   ship it - listens for "ship it" and posts a gif if populated.
 # 
 # Author: 
@@ -36,8 +37,9 @@ module.exports = (robot) ->
     I can now:
     1. Respond to {gif-name}.gif
     2. Alias other names for gifs with `alias word to gif-name`
-    3. Post ship-it squirrels! If I hear `ship it`, a gif will magically appear (if populated).
-    4. Bake a cake! All I need is your credit card number and we're in business!
+    3. Rename gifs! Ever think of a better name than that other guy? Or just misspell something? This is for you! `rename oldName to newName`
+    4. Post ship-it squirrels! If I hear `ship it`, a gif will magically appear (if populated).
+    5. Bake a cake! All I need is your credit card number and we're in business!
 
     Finally if want to limit the room this gets posted in, set HUBOT_GIF_ROOM with the room id.
     
@@ -141,9 +143,9 @@ module.exports = (robot) ->
     gif = if possibleGif?
       possibleGif
     else
-      _.filter gifLocker.gifs, (maybeGif) -> _.contains maybeGif.alias, name
-    
-    urls = gif[0]?.url || []
+      (_.filter gifLocker.gifs, (maybeGif) -> _.contains maybeGif.alias, name)[0]
+
+    urls = gif?.url || []
 
     if urls.length > 0
       msg.send urls[Math.floor(Math.random() * urls.length)]

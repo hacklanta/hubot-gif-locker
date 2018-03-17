@@ -10,6 +10,8 @@
 #   hubot gif {gif-name} - Display random gif url from given name.
 #   <gif-name>.gif - Display random gif url from given name. Will not show error message if no gif found.
 #   hubot (store|add) {gif-name} {gif-url} - Store gif url with given name.
+#   hubot alias {gif-name} {other-gif-name} - Store gif-name so that it will always point to the gifs in other-gif-name.
+#   hubot remove alias {gif-name} - Removes gif-name as an alias.
 #   hubot remove all {gif-name} - Remove all gifs with given name.
 #   hubot remove gif {gif-name} {gif-url} - Remove specific gif url with given name.
 #   hubot list gifs {gif-name} - Display gif urls from given name.
@@ -21,11 +23,21 @@
 GIF_LOCKER = 'gifLocker'
 
 module.exports = (robot) ->
-  withGifs = (callback) ->
+  getGifs = () ->
     gifLocker = robot.brain.get(GIF_LOCKER) || {}
-    gifs = gifLocker.gifs || {}
 
-    callback(gifs)
+    gifLocker.gifs || {}
+
+  getGifsNamed = (name) ->
+    gifs = getGifs()
+
+    # Look up gif, replace it with an alias if needed, recursively.
+    namedGifs = gifs[name]
+    while namedGifs?.alias?
+      namedGifs = gifs[namedGifs.alias]
+
+    # Make sure we have an array to work with.
+    namedGifs || []
 
   updatingGifs = (callback) ->
     gifLocker = robot.brain.get(GIF_LOCKER) || {}
@@ -70,56 +82,88 @@ module.exports = (robot) ->
     gifUrl = msg.match[2].trim()
 
     updatingGifs (gifs) ->
-      gifs[gifName] ||= []
-      gifs[gifName].push gifUrl
+      if gifs[gifName]?.alias?
+        msg.send "#{gifName} is an alias for #{gifs[gifName].alias}; try updating the original!"
+      else
+        gifs[gifName] ||= []
+        gifs[gifName].push gifUrl
 
-      message =
-        switch gifs[gifName].length
-          when 1
-            "one entry for that name"
-          else
-            "#{gifs[gifName].length} entries for that name"
+        message =
+          switch gifs[gifName].length
+            when 1
+              "one entry for that name"
+            else
+              "#{gifs[gifName].length} entries for that name"
 
-      msg.send "#{gifName}. Got it; #{message}."
+        msg.send "#{gifName}. Got it; #{message}."
+
+      gifs
+
+  setAlias = (msg) ->
+    aliasName = msg.match[1].trim().toLowerCase()
+    aliasTarget = msg.match[2].trim().toLowerCase()
+
+    updatingGifs (gifs) ->
+      if gifs[aliasName]? && gifs[aliasName] instanceof Array
+        msg.send "That name already has gifs under it, so it can't be used as an alias!"
+      else if gifs[aliasName]?
+        gifs[aliasName] = alias: aliasTarget
+        msg.send "Changed the alias from #{gifs[aliasName]} to #{aliasTarget}."
+      else
+        gifs[aliasName] = alias: aliasTarget
+        msg.send "All set, #{aliasName} points to #{aliasTarget}!"
+
+      gifs
+
+  removeAlias = (msg) ->
+    aliasName = msg.match[1].trim().toLowerCase()
+
+    updatingGifs (gifs) ->
+      if gifs[aliasName]? && ! gifs[aliasName].alias
+        msg.send "That's not an alias!"
+      else if gifs[aliasName]?
+        delete gifs[aliasName]
+        msg.send "Deleted alias #{aliasName}."
+      else
+        msg.send "No alias named #{aliasName} to delete!"
 
       gifs
 
   showGif = (msg, showNoGifMessage = true) ->
     gifName = msg.match[1].trim().toLowerCase()
 
-    withGifs (gifs) ->
-      gifSet = gifs[gifName] || []
-
-      if gifSet.length > 0
-        gifUrl = gifSet[Math.floor(Math.random()*gifSet.length)]
-        msg.send gifUrl
-      else
-        if showNoGifMessage
-          msg.send "Did not find any cool gifs for #{gifName}. You should add some!"
+    gifs = getGifsNamed(gifName)
+    if gifs.length > 0
+      gifUrl = gifs[Math.floor(Math.random()*gifs.length)]
+      msg.send gifUrl
+    else
+      if showNoGifMessage
+        msg.send "Did not find any cool gifs for #{gifName}. You should add some!"
 
   listGifs = (msg) ->
     gifName = msg.match[1].trim().toLowerCase()
 
-    withGifs (gifs) ->
-      gifSet = gifs[gifName] || []
-
-      msg.send gifSet.join(", ")
+    gifs = getGifsNamed(gifName)
+    msg.send gifs.join(", ")
 
   listAllGifs = (msg) ->
-    withGifs (gifs) ->
-      names = Object.keys gifs
+    names = Object.keys getGifs()
 
-      names = names.sort().toString().replace(/,/g, "\n")
+    names = names.sort().toString().replace(/,/g, "\n")
 
-      msg.send names
+    msg.send names
 
   removeGifsByName = (msg) ->
     gifName = msg.match[1].trim().toLowerCase()
 
     updatingGifs (gifs) ->
+      original = gifs[gifName]
       delete gifs[gifName]
-    
-      msg.send "Removed all URLs for #{gifName}."
+
+      if original?.alias?
+        msg.send "Removed #{gifName} alias for #{original.alias}."
+      else
+        msg.send "Removed all URLs for #{gifName}."
 
       gifs
 
@@ -129,21 +173,25 @@ module.exports = (robot) ->
 
     updatingGifs (gifs) ->
       namedGifs = gifs[gifName]
-      namedGifs = namedGifs.filter((_) -> _ != gifUrl)
 
-      message =
-        if namedGifs.length == 0
-          delete gifs[gifName]
-          "no URLs left for that name"
-        else
-          gifs[gifName] = namedGifs
-          switch namedGifs.length
-            when 1
-              "1 URL left for that name"
-            else
-              "#{namedGifs.length} URLs left for that name"
+      if namedGifs.alias?
+        msg.send "#{gifName} is an alias for #{namedGifs.alias}; please update the original."
+      else
+        namedGifs = namedGifs.filter((_) -> _ != gifUrl)
 
-      msg.send "Removed #{gifUrl} from #{gifName}; #{message}."
+        message =
+          if namedGifs.length == 0
+            delete gifs[gifName]
+            "no URLs left for that name"
+          else
+            gifs[gifName] = namedGifs
+            switch namedGifs.length
+              when 1
+                "1 URL left for that name"
+              else
+                "#{namedGifs.length} URLs left for that name"
+
+        msg.send "Removed #{gifUrl} from #{gifName}; #{message}."
 
       gifs
 
@@ -152,6 +200,12 @@ module.exports = (robot) ->
 
   robot.respond /gif (.+)/i, (msg) ->
     showGif(msg)
+
+  robot.respond /alias gif (.+) (.+)/i, (msg) ->
+    setAlias(msg)
+
+  robot.respond /remove gif alias (.+)/, (msg) ->
+     removeAlias(msg)
 
   robot.hear ///^(?!#{robot.name})(.+)\.gif$///i, (msg) ->
     showGif(msg, false)
@@ -166,4 +220,5 @@ module.exports = (robot) ->
     removeGifsByName(msg)
 
   robot.respond /remove gif (.+) (.+)/i, (msg) ->
-    removeGifsByNameUrl(msg)
+    if msg.match[1].trim().toLowerCase() != 'alias'
+      removeGifsByNameUrl(msg)

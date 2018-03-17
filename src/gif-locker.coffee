@@ -9,7 +9,7 @@
 # Commands:
 #   hubot gif {gif-name} - Display random gif url from given name.
 #   <gif-name>.gif - Display random gif url from given name. Will not show error message if no gif found.
-#   hubot store {gif-name} {gif-url} - Store gif url with given name.
+#   hubot (store|add) {gif-name} {gif-url} - Store gif url with given name.
 #   hubot remove all {gif-name} - Remove all gifs with given name.
 #   hubot remove gif {gif-name} {gif-url} - Remove specific gif url with given name.
 #   hubot list gifs {gif-name} - Display gif urls from given name.
@@ -147,7 +147,7 @@ module.exports = (robot) ->
 
       gifs
 
-  robot.respond /store (.+) (.+)/i, (msg) ->
+  robot.respond /(store|add) (.+) (.+)/i, (msg) ->
     storeGif(msg)
 
   robot.respond /gif (.+)/i, (msg) ->

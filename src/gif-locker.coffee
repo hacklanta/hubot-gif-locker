@@ -96,27 +96,43 @@ module.exports = (robot) ->
     msg.send names
 
   removeGifsByName = (msg) ->
-    gifName = msg.match[1].trim()
+    gifName = msg.match[1].trim().toLowerCase()
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase() != gifName.toLowerCase()
-    gifLocker.gifs = gifSet
+    gifs = gifLocker?.gifs || {}
 
+    delete gifs[gifName]
+
+    gifLocker.gifs = gifs
     robot.brain.set 'gifLocker', gifLocker
     
-    msg.send "Removed #{gifName}."
+    msg.send "Removed all URLs for #{gifName}."
 
   removeGifsByNameUrl = (msg) ->
-    gifName = msg.match[1].trim()
+    gifName = msg.match[1].trim().toLowerCase()
     gifUrl = msg.match[2].trim()
 
     gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> !(gif.name.toLowerCase() == gifName.toLowerCase() && gif.url == gifUrl)
-    gifLocker.gifs = gifSet
+    gifs = gifLocker?.gifs || {}
+    namedGifs = gifs[gifName]
+    namedGifs = namedGifs.filter((_) -> _ == gifUrl)
 
+    message =
+      if namedGifs.length == 0
+        delete gifs[gif]
+        "no URLs left for that name"
+      else
+        gifs[gifName] = namedGifs
+        switch namedGifs.length
+          when 1
+            "1 URL left for that name"
+          else
+            "#{namedGifs.length} URLs left for that name"
+
+    gifLocker.gifs = gifs
     robot.brain.set 'gifLocker', gifLocker
-    
-    msg.send "Removed #{gifUrl} from #{gifName}."
+
+    msg.send "Removed #{gifUrl} from #{gifName}; #{message}."
 
   robot.respond /store (.+) (.+)/i, (msg) ->
     storeGif(msg)

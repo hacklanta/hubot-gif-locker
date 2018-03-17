@@ -147,7 +147,7 @@ module.exports = (robot) ->
 
       gifs
 
-  robot.respond /(store|add) (.+) (.+)/i, (msg) ->
+  robot.respond /(?:store|add) (.+) (.+)/i, (msg) ->
     storeGif(msg)
 
   robot.respond /gif (.+)/i, (msg) ->

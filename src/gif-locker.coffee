@@ -83,7 +83,7 @@ module.exports = (robot) ->
 
     gifSet = gifLocker?.gifs?[gifName] || []
 
-    msg.send JSON.stringify(gifSet)
+    msg.send gifSet.join(", ")
 
   listAllGifs = (msg) ->
     gifLocker = robot.brain.get('gifLocker')

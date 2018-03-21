@@ -9,7 +9,7 @@
 # Commands:
 #   hubot gif {gif-name} - Display random gif url from given name.
 #   <gif-name>.gif - Display random gif url from given name. Will not show error message if no gif found.
-#   hubot store {gif-name} {gif-url} - Store gif url with given name.
+#   hubot (store|add) {gif-name} {gif-url} - Store gif url with given name.
 #   hubot remove all {gif-name} - Remove all gifs with given name.
 #   hubot remove gif {gif-name} {gif-url} - Remove specific gif url with given name.
 #   hubot list gifs {gif-name} - Display gif urls from given name.
@@ -18,8 +18,26 @@
 # Author: 
 #   @riveramj
 
+GIF_LOCKER = 'gifLocker'
 
 module.exports = (robot) ->
+  withGifs = (callback) ->
+    gifLocker = robot.brain.get(GIF_LOCKER) || {}
+    gifs = gifLocker.gifs || {}
+
+    callback(gifs)
+
+  updatingGifs = (callback) ->
+    gifLocker = robot.brain.get(GIF_LOCKER) || {}
+    gifs = gifLocker.gifs || {}
+
+    updatedGifs = callback(gifs)
+
+    # Make sure no one accidentally overwrites the gifs with something totally
+    # busted.
+    if updatedGifs? && typeof updatedGifs == 'object'
+      gifLocker.gifs = updatedGifs
+      robot.brain.set('gifLocker', gifLocker)
 
   migrateURLData = (gifSet) ->
     gifLocker = robot.brain.get('gifLocker')
@@ -51,74 +69,85 @@ module.exports = (robot) ->
     gifName = msg.match[1].trim().toLowerCase()
     gifUrl = msg.match[2].trim()
 
-    gifLocker = robot.brain.get('gifLocker') || {}
-    gifLocker.gifs ||= {}
+    updatingGifs (gifs) ->
+      gifs[gifName] ||= []
+      gifs[gifName].push gifUrl
 
-    gifLocker.gifs[gifName] ||= []
-    gifLocker.gifs[gifName].push gifUrl
+      message =
+        switch gifs[gifName].length
+          when 1
+            "one entry for that name"
+          else
+            "#{gifs[gifName].length} entries for that name"
 
-    robot.brain.set 'gifLocker', gifLocker
+      msg.send "#{gifName}. Got it; #{message}."
 
-    msg.send "#{gifName}. Got it."
+      gifs
 
   showGif = (msg, showNoGifMessage = true) ->
-
     gifName = msg.match[1].trim().toLowerCase()
 
-    gifLocker = robot.brain.get('gifLocker')
+    withGifs (gifs) ->
+      gifSet = gifs[gifName] || []
 
-    gifSet = gifLocker?.gifs?[gifName] || []
-
-    if gifSet.length > 0
-      gifUrl = gifSet[Math.floor(Math.random()*gifSet.length)]
-      msg.send gifUrl
-    else
-      if showNoGifMessage
-        msg.send "Did not find any cool gifs for #{gifName}. You should add some!"
+      if gifSet.length > 0
+        gifUrl = gifSet[Math.floor(Math.random()*gifSet.length)]
+        msg.send gifUrl
+      else
+        if showNoGifMessage
+          msg.send "Did not find any cool gifs for #{gifName}. You should add some!"
 
   listGifs = (msg) ->
     gifName = msg.match[1].trim().toLowerCase()
 
-    gifLocker = robot.brain.get('gifLocker')
+    withGifs (gifs) ->
+      gifSet = gifs[gifName] || []
 
-    gifSet = gifLocker?.gifs?[gifName] || []
-
-    msg.send JSON.stringify(gifSet)
+      msg.send gifSet.join(", ")
 
   listAllGifs = (msg) ->
-    gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs
+    withGifs (gifs) ->
+      names = Object.keys gifs
 
-    names = Object.keys gifSet
+      names = names.sort().toString().replace(/,/g, "\n")
 
-    names = names.sort().toString().replace(/,/g, "\n")
-
-    msg.send names
+      msg.send names
 
   removeGifsByName = (msg) ->
-    gifName = msg.match[1].trim()
+    gifName = msg.match[1].trim().toLowerCase()
 
-    gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> gif.name.toLowerCase() != gifName.toLowerCase()
-    gifLocker.gifs = gifSet
-
-    robot.brain.set 'gifLocker', gifLocker
+    updatingGifs (gifs) ->
+      delete gifs[gifName]
     
-    msg.send "Removed #{gifName}."
+      msg.send "Removed all URLs for #{gifName}."
+
+      gifs
 
   removeGifsByNameUrl = (msg) ->
-    gifName = msg.match[1].trim()
+    gifName = msg.match[1].trim().toLowerCase()
     gifUrl = msg.match[2].trim()
 
-    gifLocker = robot.brain.get('gifLocker')
-    gifSet = gifLocker?.gifs?.filter (gif) -> !(gif.name.toLowerCase() == gifName.toLowerCase() && gif.url == gifUrl)
-    gifLocker.gifs = gifSet
+    updatingGifs (gifs) ->
+      namedGifs = gifs[gifName]
+      namedGifs = namedGifs.filter((_) -> _ != gifUrl)
 
-    robot.brain.set 'gifLocker', gifLocker
-    
-    msg.send "Removed #{gifUrl} from #{gifName}."
+      message =
+        if namedGifs.length == 0
+          delete gifs[gifName]
+          "no URLs left for that name"
+        else
+          gifs[gifName] = namedGifs
+          switch namedGifs.length
+            when 1
+              "1 URL left for that name"
+            else
+              "#{namedGifs.length} URLs left for that name"
 
-  robot.respond /store (.+) (.+)/i, (msg) ->
+      msg.send "Removed #{gifUrl} from #{gifName}; #{message}."
+
+      gifs
+
+  robot.respond /(?:store|add) (.+) (.+)/i, (msg) ->
     storeGif(msg)
 
   robot.respond /gif (.+)/i, (msg) ->
